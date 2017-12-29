@@ -1458,12 +1458,13 @@
 {
 #ifdef ICACHE_FLUSH_FUNC
   emit_library_call (gen_rtx_SYMBOL_REF (Pmode, ICACHE_FLUSH_FUNC),
-		     LCT_NORMAL, VOIDmode, 3, operands[0], Pmode,
+		     LCT_NORMAL, VOIDmode, operands[0], Pmode,
 		     operands[1], Pmode, const0_rtx, Pmode);
 #else
   emit_insn (gen_fence_i ());
 #endif
   DONE;
+
 })
 
 (define_insn "fence"

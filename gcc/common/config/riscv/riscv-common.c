@@ -82,13 +82,7 @@ riscv_parse_arch_string (const char *isa, int *flags, location_t loc)
       p++;
 
       *flags |= MASK_RVE;
-
-      if (*flags & MASK_64BIT)
-	{
-	  error ("RV64E is not a valid base ISA");
-	  return;
-	}
-
+      
       *flags &= ~MASK_MUL;
       if (*p == 'm')
 	*flags |= MASK_MUL, p++;
