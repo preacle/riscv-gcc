@@ -94,8 +94,9 @@
 ;; scheduling type.  For doubleword moves, the attribute always describes
 ;; the split instructions; in some cases, it is more appropriate for the
 ;; scheduling type to be "multi" instead.
+;;//#change
 (define_attr "move_type"
-  "unknown,load,fpload,store,fpstore,mtc,mfc,move,fmove,
+  "unknown,load,loadr,fpload,store,storer,fpstore,mtc,mfc,move,fmove,
    const,logical,arith,andi,shift_shift"
   (const_string "unknown"))
 
@@ -143,8 +144,9 @@
 ;; multi	multiword sequence (or user asm statements)
 ;; nop		no operation
 ;; ghost	an instruction that produces no real code
+;;//#change
 (define_attr "type"
-  "unknown,branch,jump,call,load,fpload,store,fpstore,
+  "unknown,branch,jump,call,load,loadr,fpload,store,storer,fpstore,
    mtc,mfc,const,arith,logical,shift,slt,imul,idiv,move,fmove,fadd,fmul,
    fmadd,fdiv,fcmp,fcvt,fsqrt,multi,nop,ghost"
   (cond [(eq_attr "got" "load") (const_string "load")
@@ -153,8 +155,16 @@
 	 ;; it is usually better to schedule them in the same way
 	 ;; as the singleword form, rather than as "multi".
 	 (eq_attr "move_type" "load") (const_string "load")
+
+	 ;;//#change
+	 (eq_attr "move_type" "loadr") (const_string "loadr")
+
 	 (eq_attr "move_type" "fpload") (const_string "fpload")
 	 (eq_attr "move_type" "store") (const_string "store")
+
+;;//#change
+	 (eq_attr "move_type" "storer") (const_string "storer")
+	 (eq_attr "move_type" "fpstore") (const_string "fpstore")
 	 (eq_attr "move_type" "fpstore") (const_string "fpstore")
 	 (eq_attr "move_type" "mtc") (const_string "mtc")
 	 (eq_attr "move_type" "mfc") (const_string "mfc")
@@ -281,6 +291,12 @@
 
 ;; Instruction names for stores.
 (define_mode_attr store [(QI "sb") (HI "sh") (SI "sw") (DI "sd") (SF "fsw") (DF "fsd")])
+
+;; //#change Mode attributes for indexed loads.
+(define_mode_attr loadr [(QI "lbr") (HI "lhr") (SI "lwr") (DI "ldr") ])
+
+;; //#change Instruction names for indexed stores.
+(define_mode_attr storer [(QI "sbr") (HI "shr") (SI "swr") (DI "sdr")])
 
 ;; This attribute gives the best constraint to use for registers of
 ;; a given mode.
@@ -1140,6 +1156,79 @@
 ;; Lower-level instructions for loading an address from the GOT.
 ;; We could use MEMs, but an unspec gives more optimization
 ;; opportunities.
+
+;;//#change
+(define_insn "lwr_<P:mode>"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+	(mem:SI (plus:P (match_operand:P 1 "register_operand" "r")
+			  (match_operand:P 2 "register_operand" "r"))))]
+  ""
+  "lwr\t%0,%1,%2"
+  [(set_attr "type" "loadr")
+  (set_attr "mode" "<P:MODE>")])
+
+(define_insn "ldr"
+  [(set (match_operand:DI 0 "register_operand" "=r")
+	(mem:DI (plus:DI (match_operand:DI 1 "register_operand" "r")
+			  (match_operand:DI 2 "register_operand" "r"))))]
+  ""
+  "ldr\t%0,%1,%2"
+  [(set_attr "type" "loadr")
+  (set_attr "mode" "DI")])
+
+(define_insn "lbr_<P:mode>"
+  [(set (match_operand:QI 0 "register_operand" "=r")
+	(mem:QI (plus:P (match_operand:P 1 "register_operand" "r")
+			  (match_operand:P 2 "register_operand" "r"))))]
+  ""
+  "lbr\t%0,%1,%2"
+  [(set_attr "type" "loadr")
+  (set_attr "mode" "<P:MODE>")])
+
+(define_insn "lhr_<P:mode>"
+  [(set (match_operand:HI 0 "register_operand" "=r")
+	(mem:HI (plus:P (match_operand:P 1 "register_operand" "r")
+			  (match_operand:P 2 "register_operand" "r"))))]
+  ""
+  "lhr\t%0,%1,%2"
+  [(set_attr "type" "loadr")
+  (set_attr "mode" "<P:MODE>")])
+
+(define_insn "swr_<P:mode>"
+   [(set (mem:SI (plus:P (match_operand:P 1 "register_operand" "r")
+ 			  (match_operand:P 2 "register_operand" "r")))
+ 	(match_operand:SI 0 "register_operand" "r"))]
+   ""
+   "swr\t%0,%1,%2"
+   [(set_attr "type" "storer")
+    (set_attr "mode" "<P:MODE>")])
+
+(define_insn "sbr_<P:mode>"
+   [(set (mem:QI (plus:P (match_operand:P 1 "register_operand" "r")
+ 			  (match_operand:P 2 "register_operand" "r")))
+ 	(match_operand:QI 0 "register_operand" "r"))]
+   ""
+   "sbr\t%0,%1,%2"
+   [(set_attr "type" "storer")
+   (set_attr "mode" "<P:MODE>")])
+
+(define_insn "shr_<P:mode>"
+   [(set (mem:HI (plus:P (match_operand:P 1 "register_operand" "r")
+ 			  (match_operand:P 2 "register_operand" "r")))
+ 	(match_operand:HI 0 "register_operand" "r"))]
+   ""
+   "shr\t%0,%1,%2"
+   [(set_attr "type" "storer")
+    (set_attr "mode" "<P:MODE>")])
+
+(define_insn "sdr"
+   [(set (mem:DI (plus:DI (match_operand:DI 1 "register_operand" "r")
+ 			  (match_operand:DI 2 "register_operand" "r")))
+ 	(match_operand:DI 0 "register_operand" "r"))]
+   ""
+   "sdr\t%0,%1,%2"
+   [(set_attr "type" "storer")
+    (set_attr "mode" "DI")])
 
 (define_insn "got_load<mode>"
    [(set (match_operand:P      0 "register_operand" "=r")
